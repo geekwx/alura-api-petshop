@@ -2,12 +2,21 @@ const roteador = require('express').Router()
 const TabelaFornecedor = require('./TabelaFornecedor')
 const Fornecedor = require('./Fornecedor')
 const SerializadorFornecedor = require('../../Serializador').SerializadorFornecedor
+const TabelaProduto = require('./produtos/TabelaProduto')
+
+roteador.options('/', (requisicao, resposta) => {
+    resposta.set('Access-Control-Allow-Methods', 'GET, POST' )
+    resposta.set('Access-Control-Allow-Headers', 'Content-Type' )
+    resposta.status(204)
+    resposta.end()
+})
 
 roteador.get('/', async (requisicao, resposta) => {
     const resultados = await TabelaFornecedor.listar()
     resposta.status(200)
     const serializador = new SerializadorFornecedor(
-        resposta.getHeader('Content-Type')
+        resposta.getHeader('Content-Type'),
+        ['empresa']
     )
     resposta.send(
         serializador.serializar(resultados)
@@ -21,7 +30,8 @@ roteador.post('/', async (requisicao, resposta, proximo) => {
         await fornecedor.criar()
         resposta.status(201)
         const serializador = new SerializadorFornecedor(
-            resposta.getHeader('Content-Type')
+            resposta.getHeader('Content-Type'),
+            ['empresa']
         )
         resposta.send(
             serializador.serializar(fornecedor)
@@ -29,6 +39,12 @@ roteador.post('/', async (requisicao, resposta, proximo) => {
     } catch (erro) {
         proximo(erro)
     }
+})
+roteador.options('/:idFornecedor', (requisicao, resposta) => {
+    resposta.set('Access-Control-Allow-Methods', 'GET, PUT, DELETE' )
+    resposta.set('Access-Control-Allow-Headers', 'Content-Type' )
+    resposta.status(204)
+    resposta.end()
 })
 
 roteador.get('/:idFornecedor', async (requisicao, resposta, proximo) => {
@@ -39,7 +55,7 @@ roteador.get('/:idFornecedor', async (requisicao, resposta, proximo) => {
         resposta.status(200)
         const serializador = new SerializadorFornecedor(
             resposta.getHeader('Content-Type'),
-            ['email', 'dataCriacao', 'dataAtualizacao', 'versao']
+            ['email', 'empresa','dataCriacao', 'dataAtualizacao', 'versao']
         )
         resposta.send(
             serializador.serializar(fornecedor)
@@ -89,6 +105,21 @@ const verificarFornecedor = async (requisicao, resposta, proximo) => {
         proximo(erro)
     }
 }
+
+
+roteador.post('/:idFornecedor/calcular-reposicao-de-estoque', async (requisicao, resposta, proximo) => {
+    try {
+        const fornecedor = new Fornecedor({ id: requisicao.params.idFornecedor})
+        await fornecedor.carregar()
+        const produtos = await TabelaProduto.listar(fornecedor.id, {estoque: 0 })
+        resposta.send({
+            mensagem: `${produtos.length} precisam de reposição de estoque`
+        })
+    }catch(erro){
+        proximo(erro)
+    }
+})
+
 roteador.use('/:idFornecedor/produtos', verificarFornecedor ,roteadorProdutos)
 
 module.exports = roteador
