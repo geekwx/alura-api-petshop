@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize')
-const instancia = require('../../banco-de-dados')
+const instancia = require('../../../banco-de-dados')
 
 const colunas = {
     titulo: {
@@ -19,7 +19,7 @@ const colunas = {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-            model: require('../fornecedores/ModeloTabelaFornecedor'),
+            model: require('../ModeloTabelaFornecedor'),
             key: 'id'
         }
     }
